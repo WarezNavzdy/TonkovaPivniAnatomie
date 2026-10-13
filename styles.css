@@ -609,15 +609,14 @@ html, body {
   margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
 }
 .modal-title { font-size: 1.2rem; font-weight: 800; color: var(--txt-hi); display:flex; align-items:center; gap:9px; }
-.form-group { margin-bottom: 14px; }
 .form-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--txt-lo); margin-bottom: 5px; }
-.form-input, .form-textarea, .form-select {
+.form-input {
   width: 100%; background: var(--bg-input); border: 1px solid var(--border);
   border-radius: var(--r-sm); padding: 9px 11px;
   font-size: 0.87rem; color: var(--txt-hi); font-family: inherit; outline: none;
   transition: border-color 0.15s;
 }
-.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--gold); }
+.form-input:focus { border-color: var(--gold); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* pivní trasy modal */
@@ -806,11 +805,8 @@ html, body { font-family: Arial, Helvetica, sans-serif; }
 .date-meta strong { color: var(--txt-lo); font-size: 0.72rem; font-weight: 600; }
 .detail-tags { gap: 6px; }
 .date-row { margin-bottom: 12px; }
-.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 .modal-intro { margin-bottom: 16px; font-size: 0.9rem; color: var(--txt-mid); }
 .save-note-btn { color: #fffdf8; }
-.pick-location-wrap { margin-bottom: 16px; }
-.pick-location-wrap .btn-action { width: 100%; }
 .action-bar { align-items: center; }
 .action-bar #btn-routes { flex: 1 1 0; }
 .action-bar .suggest-action {
@@ -829,42 +825,6 @@ html, body { font-family: Arial, Helvetica, sans-serif; }
   color: var(--gold-light);
   text-decoration: underline;
 }
-.submissions-link {
-  display: block;
-  margin: -7px 0 10px auto;
-  padding: 2px 0;
-  border: 0;
-  background: transparent;
-  color: var(--txt-lo);
-  font: inherit;
-  font-size: 0.74rem;
-  cursor: pointer;
-}
-.submissions-link:hover { color: var(--gold-light); text-decoration: underline; }
-.submissions-link[hidden] { display: none; }
-.submission-card {
-  margin-bottom: 12px;
-  padding: 15px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--bg-card);
-}
-.submission-address, .submission-detail {
-  margin-top: 5px;
-  color: var(--txt-mid);
-  font-size: 0.86rem;
-}
-.submission-date { color: var(--txt-lo); font-size: 0.76rem; }
-.submission-notes {
-  margin: 9px 0 0;
-  padding-left: 20px;
-  color: var(--txt-mid);
-  font-size: 0.85rem;
-}
-.submission-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
-.submission-actions .btn-action { flex: 0 0 auto; }
-.submission-actions .btn-action.primary { color: #fffdf8; }
-
 @media (max-width: 520px) {
   .brand-title { font-size: 1.02rem; }
   .action-bar #btn-routes { flex: 1 1 0; }

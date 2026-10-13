@@ -48,7 +48,6 @@
             Navrhnout hospodu
           </a>
         </div>
-        <button id="btn-submissions" class="submissions-link" type="button" hidden></button>
 
         <!-- Vyhledávací pole -->
         <div class="search-wrapper">
@@ -134,88 +133,6 @@
     </div>
   </div>
 
-  <div id="submissions-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="submissions-title" aria-hidden="true" tabindex="-1">
-    <div class="modal-window">
-      <div class="modal-header">
-        <h3 id="submissions-title" class="modal-title">Návrhy ke schválení</h3>
-        <button type="button" class="detail-close-btn modal-close-btn" aria-label="Zavřít">✕</button>
-      </div>
-      <p class="modal-intro">Schválené podniky se přidají do mapy. Tato fronta není chráněná přihlášením.</p>
-      <div id="submissions-container"></div>
-    </div>
-  </div>
-
-  <!-- MODAL: NAVRHNOUT NOVOU HOSPODU -->
-  <div id="add-pub-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="add-pub-title" aria-hidden="true" tabindex="-1">
-    <div class="modal-window">
-      <div class="modal-header">
-        <h3 id="add-pub-title" class="modal-title">Navrhnout hospodu</h3>
-        <button type="button" class="detail-close-btn modal-close-btn" aria-label="Zavřít">✕</button>
-      </div>
-      <p class="modal-intro">Návrh se nejdřív uloží do schvalovací fronty. Zatím se na mapě nezobrazí.</p>
-      <form id="add-pub-form">
-        <div class="form-group">
-          <label class="form-label" for="new-pub-name">Název hospody *</label>
-          <input type="text" id="new-pub-name" class="form-input" placeholder="např. Pivnice U Hrocha" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="new-pub-address">Přesná adresa nebo čtvrť *</label>
-          <input type="text" id="new-pub-address" class="form-input" placeholder="např. Thunovská 10, Praha 1 - Malá Strana" required>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="new-pub-lat">Zeměpisná šířka (Lat) *</label>
-            <input type="number" step="0.000001" id="new-pub-lat" class="form-input" placeholder="50.0891" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-pub-lng">Zeměpisná délka (Lng) *</label>
-            <input type="number" step="0.000001" id="new-pub-lng" class="form-input" placeholder="14.4032" required>
-          </div>
-        </div>
-
-        <div class="pick-location-wrap">
-          <button type="button" id="btn-pick-location" class="btn-action">
-            Vybrat místo na mapě
-          </button>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="new-pub-rating">Naše hodnocení (1–10)</label>
-            <input type="number" step="0.1" min="1" max="10" id="new-pub-rating" class="form-input" placeholder="např. 9.2">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-pub-beer">Čepované pivo & Cena</label>
-            <input type="text" id="new-pub-beer" class="form-input" placeholder="např. Tanková Plzeň 62 Kč">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="new-pub-notes">Poznámky (každý řádek zvlášť)</label>
-          <textarea id="new-pub-notes" class="form-textarea" rows="4" placeholder="- Příjemná obsluha&#10;- Mají skvělý utopence&#10;- Lepší si udělat rezervaci"></textarea>
-        </div>
-
-        <div class="form-row date-row">
-          <div class="form-group">
-            <label class="form-label" for="new-pub-visited">Datum návštěvy</label>
-            <input type="date" id="new-pub-visited" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-pub-price-checked">Kdy ověřena cena</label>
-            <input type="date" id="new-pub-price-checked" class="form-input">
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn-action modal-close-btn">Zrušit</button>
-          <button type="submit" class="btn-action primary">Odeslat návrh</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- TOAST OZNÁMENÍ -->
   <div id="toast" class="toast" role="status" aria-live="polite">Notifikace</div>
 
@@ -230,7 +147,6 @@
   <!-- Skripty aplikace -->
   <script src="data.js"></script>
   <script src="app-utils.js"></script>
-  <script src="api-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

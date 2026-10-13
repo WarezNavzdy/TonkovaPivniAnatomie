@@ -1,11 +1,6 @@
 // Tonkova pivní anatomie - Aplikační logika
 (function () {
   const STORAGE_KEY = "prague_pubs_data_v1";
-  const SUBMISSIONS_KEY = "prague_pubs_submissions_v1";
-  const submissionsApiUrl = typeof window.PUB_SUBMISSIONS_API === "string"
-    ? window.PUB_SUBMISSIONS_API.replace(/\/+$/, "")
-    : "";
-  const usesRemoteSubmissions = Boolean(submissionsApiUrl);
   const {
     escapeHtml,
     getBeerSummary,
@@ -27,7 +22,6 @@
 
   // Načti výchozí data hned, aby byl seznam dostupný ještě před čtením úložiště.
   let pubs = JSON.parse(JSON.stringify(getFallbackPubs()));
-  let pendingPubs = [];
 
   let currentFilter = "all";
   let currentSearch = "";
@@ -68,121 +62,32 @@
     }
   }
 
-  function loadPendingPubs() {
-    if (usesRemoteSubmissions) {
-      pendingPubs = [];
-      renderSubmissionCount();
-      return;
-    }
-
+  function removeLegacySubmissions() {
     try {
-      const saved = localStorage.getItem(SUBMISSIONS_KEY);
-      const parsed = saved ? JSON.parse(saved) : [];
-      pendingPubs = Array.isArray(parsed) ? parsed : [];
+      localStorage.removeItem("prague_pubs_submissions_v1");
     } catch (error) {
-      console.warn("Chyba při čtení návrhů z localStorage:", error);
-      pendingPubs = [];
-    }
-    renderSubmissionCount();
-  }
-
-  function savePendingPubs() {
-    if (usesRemoteSubmissions) {
-      renderSubmissionCount();
-      return true;
-    }
-
-    try {
-      localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(pendingPubs));
-      renderSubmissionCount();
-      return true;
-    } catch (error) {
-      console.warn("Uložení návrhů do localStorage se nezdařilo:", error);
-      showToast("Návrh se nepodařilo uložit.");
-      return false;
+      console.warn("Staré návrhy z tohoto prohlížeče nešlo odstranit:", error);
     }
   }
 
-  function renderSubmissionCount() {
-    const button = document.getElementById("btn-submissions");
-    if (!button) return;
-    button.hidden = pendingPubs.length === 0;
-    const label = usesRemoteSubmissions ? "Návrhy k návštěvě" : "Návrhy ke schválení";
-    button.textContent = `${label} (${pendingPubs.length})`;
-  }
-
-  // Asynchronní pokus o načtení z backendového REST API (pokud běží server.py)
+  // Načtení sdílených dat z lokálního REST API, pokud běží server.py.
   async function syncWithBackendIfAvailable() {
     if (!window.location.protocol.startsWith("http")) return;
     if (window.location.hostname.endsWith(".github.io")) return;
-
-    if (usesRemoteSubmissions) {
-      try {
-        const response = await fetch(`${submissionsApiUrl}/api/submissions`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const suggestions = await response.json();
-        if (!Array.isArray(suggestions)) throw new Error("Neplatný seznam návrhů");
-        pendingPubs = suggestions;
-        renderSubmissionCount();
-      } catch (error) {
-        console.warn("Načtení návrhů z GitHubu se nezdařilo:", error);
-        showToast("Návrhy se nepodařilo načíst z GitHubu.");
-      }
-      return;
-    }
 
     try {
       const resp = await fetch("/api/pubs");
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const apiPubs = await resp.json();
-      if (Array.isArray(apiPubs) && apiPubs.length > 0) {
+      if (!Array.isArray(apiPubs)) throw new Error("Neplatný seznam podniků");
+      if (apiPubs.length > 0) {
         pubs = apiPubs;
         renderMarkers();
         renderList();
       }
-      const submissionsResponse = await fetch("/api/submissions");
-      if (!submissionsResponse.ok) throw new Error(`HTTP ${submissionsResponse.status}`);
-      const apiSubmissions = await submissionsResponse.json();
-      if (!Array.isArray(apiSubmissions)) throw new Error("Neplatný seznam návrhů");
-      const serverSubmissionIds = new Set(apiSubmissions.map(pub => pub.id));
-      const publishedIds = new Set(Array.isArray(apiPubs) ? apiPubs.map(pub => pub.id) : []);
-      const unsynced = pendingPubs.filter(pub =>
-        pub.pendingSync && !serverSubmissionIds.has(pub.id) && !publishedIds.has(pub.id)
-      );
-      pendingPubs = [...apiSubmissions, ...unsynced];
-      savePendingPubs();
-
-      const unsyncedIds = new Set();
-      for (const proposal of unsynced) {
-        const payload = { ...proposal };
-        delete payload.pendingSync;
-        try {
-          const response = await fetch("/api/submissions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          if (!response.ok && response.status !== 409) throw new Error(`HTTP ${response.status}`);
-        } catch (error) {
-          console.warn(`Synchronizace návrhu "${proposal.name}" se nezdařila:`, error);
-          unsyncedIds.add(proposal.id);
-        }
-      }
-      if (unsynced.length > 0) {
-        const refreshedResponse = await fetch("/api/submissions");
-        if (!refreshedResponse.ok) throw new Error(`HTTP ${refreshedResponse.status}`);
-        const refreshed = await refreshedResponse.json();
-        if (!Array.isArray(refreshed)) throw new Error("Neplatný seznam návrhů");
-        const refreshedIds = new Set(refreshed.map(pub => pub.id));
-        pendingPubs = [
-          ...refreshed,
-          ...unsynced.filter(pub => unsyncedIds.has(pub.id) && !refreshedIds.has(pub.id))
-        ];
-        savePendingPubs();
-      }
     } catch (error) {
       console.warn("Synchronizace s REST API se nezdařila:", error);
-      showToast("Serverové API není dostupné. Data zůstávají uložená v tomto prohlížeči.");
+      showToast("Serverové API není dostupné. Používají se místní data.");
     }
   }
 
@@ -230,17 +135,6 @@
     // Vykreslit všechny hospody na mapě
     renderMarkers();
 
-    // Map click pro výběr souřadnic při přidávání hospody
-    map.on("click", function (e) {
-      if (window.isSelectingLocationOnMap) {
-        const { lat, lng } = e.latlng;
-        document.getElementById("new-pub-lat").value = lat.toFixed(6);
-        document.getElementById("new-pub-lng").value = lng.toFixed(6);
-        window.isSelectingLocationOnMap = false;
-        showToast(`Souřadnice nastaveny: ${lat.toFixed(4)}, ${lng.toFixed(4)}.`);
-        openDialog(document.getElementById("add-pub-modal"));
-      }
-    });
   }
 
   function setMapTheme(themeKey) {
@@ -331,7 +225,7 @@
     markers = {};
 
     pubs.forEach((pub) => {
-      if (!pub.lat || !pub.lng) return;
+      if (!Number.isFinite(pub.lat) || !Number.isFinite(pub.lng)) return;
 
       const marker = L.marker([pub.lat, pub.lng], {
         icon: createMarkerIcon(pub)
@@ -501,7 +395,7 @@
     });
 
     // Plynulý přelet mapy
-    if (map && pub.lat && pub.lng) {
+    if (map && Number.isFinite(pub.lat) && Number.isFinite(pub.lng)) {
       map.flyTo([pub.lat, pub.lng], 16, {
         animate: true,
         duration: 1.0
@@ -766,104 +660,6 @@
     openDialog(document.getElementById("pub-crawls-modal"));
   }
 
-  function showSubmissionsModal() {
-    const container = document.getElementById("submissions-container");
-    if (!container) return;
-    document.getElementById("submissions-title").textContent = usesRemoteSubmissions
-      ? "Návrhy k návštěvě"
-      : "Návrhy ke schválení";
-    document.querySelector("#submissions-modal .modal-intro").textContent = usesRemoteSubmissions
-      ? "Návrhy jsou oddělené od mapy. JSON soubor v repozitáři je veřejně čitelný."
-      : "Schválené podniky se přidají do mapy. Tato fronta není chráněná přihlášením.";
-
-    container.innerHTML = pendingPubs.length
-      ? pendingPubs.map(pub => `
-        <div class="submission-card">
-          <div class="crawl-route-header">
-            <strong class="crawl-route-title">${escapeHtml(pub.name)}</strong>
-            <span class="submission-date">${escapeHtml(formatDate(pub.submittedAt?.slice(0, 10)))}</span>
-          </div>
-          <p class="submission-address">${escapeHtml(pub.address)}</p>
-          ${pub.beerType ? `<p class="submission-detail">${escapeHtml(pub.beerType)}</p>` : ""}
-          ${pub.rating ? `<p class="submission-detail">Navržené hodnocení: ${escapeHtml(pub.rating)}/10</p>` : ""}
-          ${getPubNotes(pub).length
-            ? `<ul class="submission-notes">${getPubNotes(pub).map(note => `<li>${escapeHtml(note)}</li>`).join("")}</ul>`
-            : ""}
-          ${usesRemoteSubmissions ? "" : `
-            <div class="submission-actions">
-              <button type="button" class="btn-action primary" data-action="approve-submission" data-pub-id="${escapeHtml(pub.id)}">Schválit a přidat</button>
-              <button type="button" class="btn-action" data-action="reject-submission" data-pub-id="${escapeHtml(pub.id)}">Odebrat návrh</button>
-            </div>
-          `}
-        </div>
-      `).join("")
-      : `<p class="source-note">Ve frontě teď žádné návrhy nejsou.</p>`;
-
-    openDialog(document.getElementById("submissions-modal"));
-  }
-
-  async function approveSubmission(pubId) {
-    if (usesRemoteSubmissions) {
-      showToast("GitHub návrhy jsou pouze pro čtení a do mapy se automaticky nepřidávají.");
-      return;
-    }
-
-    const proposal = pendingPubs.find(pub => pub.id === pubId);
-    if (!proposal) return;
-
-    let approvedPub = { ...proposal };
-    delete approvedPub.submittedAt;
-    delete approvedPub.pendingSync;
-    if (window.location.protocol.startsWith("http")) {
-      try {
-        const response = await fetch(`/api/submissions/${encodeURIComponent(pubId)}/approve`, { method: "POST" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        if (!result.pub) throw new Error("Server nevrátil schválený podnik");
-        approvedPub = result.pub;
-      } catch (error) {
-        console.warn("Schválení návrhu na serveru se nezdařilo:", error);
-        showToast("Návrh se nepodařilo schválit na serveru.");
-        return;
-      }
-    }
-
-    if (!pubs.some(pub => pub.id === approvedPub.id)) pubs.unshift(approvedPub);
-    if (!savePubsData()) return;
-    pendingPubs = pendingPubs.filter(pub => pub.id !== pubId);
-    savePendingPubs();
-    renderMarkers();
-    renderList();
-    showSubmissionsModal();
-    showToast(`„${approvedPub.name}“ bylo přidáno na mapu.`);
-  }
-
-  async function rejectSubmission(pubId) {
-    if (usesRemoteSubmissions) {
-      showToast("GitHub návrhy jsou pouze pro čtení.");
-      return;
-    }
-
-    if (!pendingPubs.some(pub => pub.id === pubId)) return;
-
-    if (window.location.protocol.startsWith("http")) {
-      try {
-        const response = await fetch(`/api/submissions/${encodeURIComponent(pubId)}`, { method: "DELETE" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      } catch (error) {
-        console.warn("Odebrání návrhu ze serveru se nezdařilo:", error);
-        showToast("Návrh se nepodařilo odebrat ze serveru.");
-        return;
-      }
-    }
-
-    pendingPubs = pendingPubs.filter(pub => pub.id !== pubId);
-    if (savePendingPubs()) {
-      showSubmissionsModal();
-      showToast("Návrh byl odebrán.");
-    }
-  }
-
   function activatePubCrawl(routeId) {
     const route = pubCrawlRoutes.find(r => r.id === routeId);
     if (!route) return;
@@ -873,7 +669,7 @@
     const points = [];
     route.stops.forEach(id => {
       const pub = pubs.find(p => p.id === id);
-      if (pub && pub.lat && pub.lng) {
+      if (pub && Number.isFinite(pub.lat) && Number.isFinite(pub.lng)) {
         points.push([pub.lat, pub.lng]);
       }
     });
@@ -897,116 +693,6 @@
     showToast(`Trasa „${route.title}“ je na mapě.`);
   }
 
-  // Nové podniky čekají na ruční schválení.
-  async function handleAddPubSubmit(e) {
-    e.preventDefault();
-    const name = document.getElementById("new-pub-name").value.trim();
-    const address = document.getElementById("new-pub-address").value.trim();
-    const lat = parseFloat(document.getElementById("new-pub-lat").value);
-    const lng = parseFloat(document.getElementById("new-pub-lng").value);
-    const rating = parseFloat(document.getElementById("new-pub-rating").value) || null;
-    const beer = document.getElementById("new-pub-beer").value.trim();
-    const notesText = document.getElementById("new-pub-notes").value.trim();
-    const lastVisited = document.getElementById("new-pub-visited").value;
-    const priceCheckedAt = document.getElementById("new-pub-price-checked").value;
-
-    if (!name || isNaN(lat) || isNaN(lng)) {
-      alert("Vyplň prosím název hospody a platné souřadnice.");
-      return;
-    }
-
-    const id = "pub-" + Date.now();
-    const notes = notesText ? notesText.split("\n").filter(l => l.trim().length > 0) : [];
-
-    const newPub = {
-      id: id,
-      name: name,
-      address: address || "Praha",
-      lat: lat,
-      lng: lng,
-      district: address.includes("Praha") ? address : "Praha",
-      rating: rating,
-      beerRating: rating ? `Pivo ${rating}/10` : beer,
-      beerType: beer || "Čepované pivo",
-      priceLevel: "Vlastní záznam",
-      tags: ["Moje přidaná", "Nová"],
-      quote: notes[0] || "",
-      notes: notes,
-      atmosphere: "Vlastní oblíbené místo",
-      userReviewed: rating !== null || Boolean(lastVisited),
-      lastVisited: lastVisited,
-      priceCheckedAt: priceCheckedAt
-    };
-
-    newPub.submittedAt = new Date().toISOString();
-
-    if (usesRemoteSubmissions) {
-      const submissionPassword = window.prompt("Zadej soukromý přístupový klíč pro přidání návrhu:");
-      if (!submissionPassword) return;
-
-      try {
-        const response = await fetch(`${submissionsApiUrl}/api/submissions`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${submissionPassword}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(newPub)
-        });
-        if (!response.ok) {
-          const result = await response.json().catch(() => ({}));
-          throw new Error(result.error || `HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
-        if (!result.suggestion || result.suggestion.id !== id) {
-          throw new Error("API nevrátilo uložený návrh");
-        }
-        pendingPubs = [result.suggestion, ...pendingPubs.filter(pub => pub.id !== id)];
-        renderSubmissionCount();
-        closeDialog(document.getElementById("add-pub-modal"), false);
-        e.target.reset();
-        document.getElementById("btn-add-pub").focus();
-        showToast(`„${name}“ bylo uloženo mezi návrhy k návštěvě.`);
-      } catch (error) {
-        console.warn("Uložení návrhu do GitHubu se nezdařilo:", error);
-        showToast(`Návrh se nepodařilo uložit: ${error.message}`);
-      }
-      return;
-    }
-
-    newPub.pendingSync = true;
-    pendingPubs.unshift(newPub);
-    if (!savePendingPubs()) return;
-
-    closeDialog(document.getElementById("add-pub-modal"), false);
-    e.target.reset();
-    document.getElementById("btn-add-pub").focus();
-
-    if (window.location.protocol.startsWith("http")) {
-      try {
-        const submissionPayload = { ...newPub };
-        delete submissionPayload.pendingSync;
-        const response = await fetch("/api/submissions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(submissionPayload)
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const submissionsResponse = await fetch("/api/submissions");
-        if (!submissionsResponse.ok) throw new Error(`HTTP ${submissionsResponse.status}`);
-        pendingPubs = await submissionsResponse.json();
-        pendingPubs = pendingPubs.map(pub => pub.id === id ? { ...pub, pendingSync: false } : pub);
-        savePendingPubs();
-      } catch (error) {
-        console.warn("Odeslání návrhu na server se nezdařilo:", error);
-        showToast("Návrh čeká lokálně; server ho nepřijal.");
-        return;
-      }
-    }
-    showToast(`„${name}“ čeká na schválení.`);
-  }
-
   // Export & Import
   function showExportModal() {
     const jsonStr = JSON.stringify(pubs, null, 2);
@@ -1025,9 +711,12 @@
 
   function copyExportJson() {
     const textarea = document.getElementById("export-textarea");
-    navigator.clipboard.writeText(textarea.value).then(() => {
-      showToast("JSON zkopírován do schránky.");
-    });
+    navigator.clipboard.writeText(textarea.value)
+      .then(() => showToast("JSON zkopírován do schránky."))
+      .catch((error) => {
+        console.warn("Kopírování JSON se nezdařilo:", error);
+        showToast("JSON se nepodařilo zkopírovat do schránky.");
+      });
   }
 
   function resetToDefaults() {
@@ -1136,16 +825,6 @@
       routesBtn.addEventListener("click", showPubCrawlsModal);
     }
 
-    const submissionsBtn = document.getElementById("btn-submissions");
-    if (submissionsBtn) {
-      submissionsBtn.addEventListener("click", showSubmissionsModal);
-    }
-
-    const addPubForm = document.getElementById("add-pub-form");
-    if (addPubForm) {
-      addPubForm.addEventListener("submit", handleAddPubSubmit);
-    }
-
     document.querySelectorAll(".modal-overlay").forEach(overlay => {
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) {
@@ -1153,15 +832,6 @@
         }
       });
     });
-
-    const pickLocBtn = document.getElementById("btn-pick-location");
-    if (pickLocBtn) {
-      pickLocBtn.addEventListener("click", () => {
-        window.isSelectingLocationOnMap = true;
-        closeDialog(document.getElementById("add-pub-modal"), false);
-        showToast("Klikni na mapu v místě, kde hospoda leží.");
-      });
-    }
 
     const detailOverlay = document.getElementById("detail-overlay");
     if (detailOverlay) {
@@ -1200,12 +870,6 @@
         break;
       case "activate-route":
         activatePubCrawl(actionElement.dataset.routeId);
-        break;
-      case "approve-submission":
-        approveSubmission(actionElement.dataset.pubId);
-        break;
-      case "reject-submission":
-        rejectSubmission(actionElement.dataset.pubId);
         break;
     }
   }
@@ -1254,8 +918,8 @@
   }
 
   function initApp() {
+    removeLegacySubmissions();
     loadPubsData();
-    loadPendingPubs();
     initMap();
     renderList();
     syncWithBackendIfAvailable();

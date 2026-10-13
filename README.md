@@ -12,20 +12,15 @@ Pro lokální REST API spusť v této složce:
 python server.py
 ```
 
-Pak otevři `http://localhost:8080`. Server čte a zapisuje `pubs.json`. API poskytuje:
+Pak otevři `http://localhost:8080`. Server čte a zapisuje `pubs.json` a naslouchá pouze na tomto počítači. API poskytuje:
 
 - `GET /api/pubs` – seznam podniků
 - `GET /api/pubs/<id>` – jeden podnik
 - `POST /api/pubs` – přidání podniku
 - `PUT /api/pubs/<id>` – úprava podniku
 - `DELETE /api/pubs/<id>` – smazání podniku
-- `GET /api/submissions` – návrhy čekající na schválení
-- `POST /api/submissions` – odeslání návrhu do fronty
-- `POST /api/submissions/<id>/approve` – schválení a přidání do mapy
-- `DELETE /api/submissions/<id>` – odebrání návrhu z fronty
 
 Bez serveru se změny ukládají v `localStorage` prohlížeče; nejde tedy o sdílené úložiště.
-Neschválené návrhy se ukládají zvlášť do `pub-submissions.json` a v seznamu podniků ani na mapě se nezobrazují. Schvalovací fronta není chráněná přihlášením — kdokoli s přístupem k aplikaci může návrh schválit nebo odebrat.
 
 ## Návrhy hospod
 

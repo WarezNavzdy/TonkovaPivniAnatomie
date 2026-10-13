@@ -1,256 +1,237 @@
 #!/usr/bin/env python3
-"""
-Jednoduchý lokální server s REST API pro Pražskou pivní mapu.
-Spuštění: python server.py
-Webová adresa: http://localhost:8080
-API endpointy:
-  - GET  /api/pubs       (vrátí všechny hospody)
-  - GET  /api/pubs/<id>  (vrátí detail jedné hospody)
-  - POST /api/pubs       (přidá novou hospodu)
-  - PUT  /api/pubs/<id>  (aktualizuje poznámky / hodnocení)
-  - DELETE /api/pubs/<id>(smaže hospodu)
-"""
+"""Lokální webový server a REST API pro Tonkovu pivní anatomii."""
 
-import http.server
-import socketserver
 import json
+import math
 import os
-import sys
+import tempfile
+import threading
 import urllib.parse
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
-# Zajištění podpory UTF-8 na Windows konzoli
-if sys.platform.startswith("win"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-        sys.stderr.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
 
+HOST = "127.0.0.1"
 PORT = 8080
-DATA_FILE = os.path.join(os.path.dirname(__file__), "pubs.json")
-SUBMISSIONS_FILE = os.path.join(os.path.dirname(__file__), "pub-submissions.json")
+MAX_BODY_BYTES = 1_048_576
+BASE_DIR = Path(__file__).resolve().parent
+DATA_FILE = BASE_DIR / "pubs.json"
+DATA_LOCK = threading.RLock()
 
-# Pokud pubs.json ještě neexistuje, inicializujeme ho z data.js
-def ensure_data_file():
-    if not os.path.exists(DATA_FILE):
+
+class PubsRequestHandler(SimpleHTTPRequestHandler):
+    def load_pubs(self):
+        if not DATA_FILE.exists():
+            return []
+        with DATA_FILE.open("r", encoding="utf-8") as data_file:
+            pubs = json.load(data_file)
+        if not isinstance(pubs, list) or any(not isinstance(pub, dict) for pub in pubs):
+            raise ValueError("pubs.json must contain a JSON array of objects")
+        return pubs
+
+    def save_pubs(self, pubs):
+        temporary_path = None
         try:
-            with open(os.path.join(os.path.dirname(__file__), "data.js"), "r", encoding="utf-8") as f:
-                content = f.read()
-                # Extrahujeme pole initialPubs
-                start = content.find("const initialPubs = [")
-                if start != -1:
-                    start = content.find("[", start)
-                    end = content.find("];\n", start) + 1
-                    json_text = content[start:end]
-                    # Nahradíme případné komentáře nebo načteme přes node/json
-                    # Pro jistotu použijeme fallback python parser nebo spuštění node
-                    pass
-        except Exception:
-            pass
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=DATA_FILE.parent,
+                prefix=f"{DATA_FILE.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as data_file:
+                temporary_path = Path(data_file.name)
+                json.dump(pubs, data_file, ensure_ascii=False, indent=2)
+                data_file.write("\n")
+            os.replace(temporary_path, DATA_FILE)
+        finally:
+            if temporary_path is not None and temporary_path.exists():
+                temporary_path.unlink()
 
-ensure_data_file()
+    def send_json(self, status, payload):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
-class PubsRequestHandler(http.server.SimpleHTTPRequestHandler):
-    def end_headers(self):
-        # Povolit CORS pro snadný vývoj
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        super().end_headers()
+    def read_json_body(self):
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+        except ValueError as error:
+            raise ValueError("Content-Length must be a valid integer") from error
+        if length <= 0:
+            raise ValueError("A JSON request body is required")
+        if length > MAX_BODY_BYTES:
+            raise OverflowError("Request body is too large")
+
+        body = self.rfile.read(length)
+        if len(body) != length:
+            raise ValueError("Request body ended unexpectedly")
+        try:
+            value = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError("Request body must be valid UTF-8 JSON") from error
+        if not isinstance(value, dict):
+            raise ValueError("Request body must be a JSON object")
+        return value
+
+    def handle_api_failure(self, error):
+        self.log_error("API request failed: %s", error)
+        self.send_json(500, {"error": "Server nemohl zpracovat požadavek."})
+
+    @staticmethod
+    def get_pub_id(path):
+        prefix = "/api/pubs/"
+        if not path.startswith(prefix):
+            return None
+        encoded_id = path[len(prefix):]
+        if not encoded_id or "/" in encoded_id:
+            return None
+        return urllib.parse.unquote(encoded_id)
 
     def do_OPTIONS(self):
         self.send_response(204)
+        self.send_header("Allow", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
         self.end_headers()
-
-    def load_pubs(self):
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        return []
-
-    def save_pubs(self, pubs):
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(pubs, f, ensure_ascii=False, indent=2)
-
-    def load_submissions(self):
-        if os.path.exists(SUBMISSIONS_FILE):
-            with open(SUBMISSIONS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        return []
-
-    def save_submissions(self, submissions):
-        with open(SUBMISSIONS_FILE, "w", encoding="utf-8") as f:
-            json.dump(submissions, f, ensure_ascii=False, indent=2)
-
-    def send_json(self, status, payload):
-        self.send_response(status)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.end_headers()
-        self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
-
-    def read_json_body(self):
-        length = int(self.headers.get('Content-Length', 0))
-        try:
-            value = json.loads(self.rfile.read(length).decode('utf-8'))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            return None
-        return value if isinstance(value, dict) else None
 
     def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/api/pubs":
-            pubs = self.load_pubs()
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.end_headers()
-            self.wfile.write(json.dumps(pubs, ensure_ascii=False).encode('utf-8'))
-            return
-        elif parsed.path == "/api/submissions":
-            self.send_json(200, self.load_submissions())
-            return
-        elif parsed.path.startswith("/api/pubs/"):
-            pub_id = parsed.path.replace("/api/pubs/", "")
-            pubs = self.load_pubs()
-            pub = next((p for p in pubs if p.get("id") == pub_id), None)
-            if pub:
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json; charset=utf-8')
-                self.end_headers()
-                self.wfile.write(json.dumps(pub, ensure_ascii=False).encode('utf-8'))
-            else:
-                self.send_response(404)
-                self.end_headers()
+        path = urllib.parse.urlsplit(self.path).path
+        if path == "/api/pubs":
+            try:
+                with DATA_LOCK:
+                    pubs = self.load_pubs()
+                self.send_json(200, pubs)
+            except (OSError, json.JSONDecodeError, ValueError) as error:
+                self.handle_api_failure(error)
             return
 
-        # Statické soubory
+        pub_id = self.get_pub_id(path)
+        if pub_id is not None:
+            try:
+                with DATA_LOCK:
+                    pub = next((item for item in self.load_pubs() if item.get("id") == pub_id), None)
+                if pub is None:
+                    self.send_json(404, {"error": "Podnik nebyl nalezen."})
+                else:
+                    self.send_json(200, pub)
+            except (OSError, json.JSONDecodeError, ValueError) as error:
+                self.handle_api_failure(error)
+            return
+
+        if path.startswith("/api/"):
+            self.send_json(404, {"error": "API endpoint neexistuje."})
+            return
         super().do_GET()
 
     def do_POST(self):
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/api/submissions":
-            submission = self.read_json_body()
-            if not submission or not isinstance(submission.get("id"), str):
-                self.send_json(400, {"error": "Návrh musí obsahovat ID."})
-                return
-
-            submissions = self.load_submissions()
-            if any(item.get("id") == submission["id"] for item in submissions):
-                self.send_json(409, {"error": "Návrh s tímto ID už existuje."})
-                return
-
-            submissions.insert(0, submission)
-            self.save_submissions(submissions)
-            self.send_json(201, {"success": True, "submission": submission})
+        if urllib.parse.urlsplit(self.path).path != "/api/pubs":
+            self.send_json(404, {"error": "API endpoint neexistuje."})
             return
 
-        path_parts = [urllib.parse.unquote(part) for part in parsed.path.strip("/").split("/")]
-        if len(path_parts) == 4 and path_parts[:2] == ["api", "submissions"] and path_parts[3] == "approve":
-            submission_id = path_parts[2]
-            submissions = self.load_submissions()
-            submission = next((item for item in submissions if item.get("id") == submission_id), None)
-            pubs = self.load_pubs()
-            existing_pub = next((pub for pub in pubs if pub.get("id") == submission_id), None)
-            if submission is None:
-                if existing_pub is not None:
-                    self.send_json(200, {"success": True, "pub": existing_pub})
-                else:
-                    self.send_json(404, {"error": "Návrh nebyl nalezen."})
-                return
+        try:
+            new_pub = self.read_json_body()
+        except OverflowError as error:
+            self.send_json(413, {"error": str(error)})
+            return
+        except ValueError as error:
+            self.send_json(400, {"error": str(error)})
+            return
 
-            approved_pub = {key: value for key, value in submission.items() if key != "submittedAt"}
-            if existing_pub is None:
-                pubs.insert(0, approved_pub)
+        pub_id = new_pub.get("id")
+        name = new_pub.get("name")
+        lat = new_pub.get("lat")
+        lng = new_pub.get("lng")
+        if not isinstance(pub_id, str) or not pub_id.strip() or not isinstance(name, str) or not name.strip():
+            self.send_json(400, {"error": "Podnik musí obsahovat neprázdné ID a název."})
+            return
+        if (
+            isinstance(lat, bool)
+            or isinstance(lng, bool)
+            or not isinstance(lat, (int, float))
+            or not isinstance(lng, (int, float))
+            or not math.isfinite(lat)
+            or not math.isfinite(lng)
+            or not -90 <= lat <= 90
+            or not -180 <= lng <= 180
+        ):
+            self.send_json(400, {"error": "Podnik musí obsahovat platné souřadnice."})
+            return
+
+        try:
+            with DATA_LOCK:
+                pubs = self.load_pubs()
+                if any(pub.get("id") == pub_id for pub in pubs):
+                    self.send_json(409, {"error": "Podnik s tímto ID už existuje."})
+                    return
+                pubs.insert(0, new_pub)
                 self.save_pubs(pubs)
-            submissions = [item for item in submissions if item.get("id") != submission_id]
-            self.save_submissions(submissions)
-            self.send_json(200, {"success": True, "pub": approved_pub})
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            self.handle_api_failure(error)
             return
-
-        if self.path == "/api/pubs":
-            length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(length)
-            new_pub = json.loads(body.decode('utf-8'))
-
-            pubs = self.load_pubs()
-            pubs.insert(0, new_pub)
-            self.save_pubs(pubs)
-
-            self.send_response(201)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.end_headers()
-            self.wfile.write(json.dumps({"success": True, "pub": new_pub}, ensure_ascii=False).encode('utf-8'))
-            return
-
-        self.send_response(404)
-        self.end_headers()
+        self.send_json(201, {"success": True, "pub": new_pub})
 
     def do_PUT(self):
-        if self.path.startswith("/api/pubs/"):
-            pub_id = self.path.replace("/api/pubs/", "")
-            length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(length)
-            updated_data = json.loads(body.decode('utf-8'))
-
-            pubs = self.load_pubs()
-            for i, p in enumerate(pubs):
-                if p.get("id") == pub_id:
-                    pubs[i].update(updated_data)
-                    self.save_pubs(pubs)
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json; charset=utf-8')
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"success": True, "pub": pubs[i]}, ensure_ascii=False).encode('utf-8'))
-                    return
-
-            self.send_response(404)
-            self.end_headers()
+        pub_id = self.get_pub_id(urllib.parse.urlsplit(self.path).path)
+        if pub_id is None:
+            self.send_json(404, {"error": "API endpoint neexistuje."})
             return
 
-        self.send_response(404)
-        self.end_headers()
+        try:
+            updated_data = self.read_json_body()
+        except OverflowError as error:
+            self.send_json(413, {"error": str(error)})
+            return
+        except ValueError as error:
+            self.send_json(400, {"error": str(error)})
+            return
+        if "id" in updated_data and updated_data["id"] != pub_id:
+            self.send_json(400, {"error": "ID podniku nelze změnit."})
+            return
+
+        try:
+            with DATA_LOCK:
+                pubs = self.load_pubs()
+                pub = next((item for item in pubs if item.get("id") == pub_id), None)
+                if pub is None:
+                    self.send_json(404, {"error": "Podnik nebyl nalezen."})
+                    return
+                pub.update(updated_data)
+                self.save_pubs(pubs)
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            self.handle_api_failure(error)
+            return
+        self.send_json(200, {"success": True, "pub": pub})
 
     def do_DELETE(self):
-        parsed = urllib.parse.urlparse(self.path)
-        path_parts = [urllib.parse.unquote(part) for part in parsed.path.strip("/").split("/")]
-        if len(path_parts) == 3 and path_parts[:2] == ["api", "submissions"]:
-            submission_id = path_parts[2]
-            submissions = self.load_submissions()
-            updated = [item for item in submissions if item.get("id") != submission_id]
-            if len(updated) == len(submissions):
-                self.send_json(404, {"error": "Návrh nebyl nalezen."})
-                return
-            self.save_submissions(updated)
-            self.send_json(200, {"success": True})
+        pub_id = self.get_pub_id(urllib.parse.urlsplit(self.path).path)
+        if pub_id is None:
+            self.send_json(404, {"error": "API endpoint neexistuje."})
             return
 
-        if self.path.startswith("/api/pubs/"):
-            pub_id = self.path.replace("/api/pubs/", "")
-            pubs = self.load_pubs()
-            new_pubs = [p for p in pubs if p.get("id") != pub_id]
-            self.save_pubs(new_pubs)
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.end_headers()
-            self.wfile.write(json.dumps({"success": True}, ensure_ascii=False).encode('utf-8'))
+        try:
+            with DATA_LOCK:
+                pubs = self.load_pubs()
+                updated_pubs = [pub for pub in pubs if pub.get("id") != pub_id]
+                if len(updated_pubs) == len(pubs):
+                    self.send_json(404, {"error": "Podnik nebyl nalezen."})
+                    return
+                self.save_pubs(updated_pubs)
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            self.handle_api_failure(error)
             return
+        self.send_json(200, {"success": True})
 
-        self.send_response(404)
-        self.end_headers()
 
 if __name__ == "__main__":
-    # Vytvoření pubs.json z data.js pomocí node, pokud neexistuje
-    if not os.path.exists(DATA_FILE):
+    request_handler = partial(PubsRequestHandler, directory=str(BASE_DIR))
+    with ThreadingHTTPServer((HOST, PORT), request_handler) as server:
+        print(f"Tonkova pivní mapa běží na: http://{HOST}:{PORT}")
+        print(f"REST API: http://{HOST}:{PORT}/api/pubs")
         try:
-            import subprocess
-            subprocess.run(["node", "-e", "const { initialPubs } = require('./data.js'); require('fs').writeFileSync('pubs.json', JSON.stringify(initialPubs, null, 2));"])
-        except Exception:
-            pass
-
-    server_address = ('', PORT)
-    with socketserver.TCPServer(server_address, PubsRequestHandler) as httpd:
-        print(f"🍺 Tonkova pivní mapa běží na: http://localhost:{PORT}")
-        print(f"📡 REST API je dostupné na:   http://localhost:{PORT}/api/pubs")
-        try:
-            httpd.serve_forever()
+            server.serve_forever()
         except KeyboardInterrupt:
             print("\nServer zastaven.")
