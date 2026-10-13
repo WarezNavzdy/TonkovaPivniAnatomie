@@ -804,9 +804,9 @@ html, body { font-family: Arial, Helvetica, sans-serif; }
 .pick-location-wrap { margin-bottom: 16px; }
 .pick-location-wrap .btn-action { width: 100%; }
 .action-bar { align-items: center; }
-.action-bar #btn-routes { flex: 0 0 auto; }
+.action-bar #btn-routes { flex: 1 1 0; }
 .action-bar .suggest-action {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   justify-content: flex-end;
   padding-right: 2px;
   border-color: transparent;
@@ -859,6 +859,6 @@ html, body { font-family: Arial, Helvetica, sans-serif; }
 
 @media (max-width: 520px) {
   .brand-title { font-size: 1.02rem; }
-  .action-bar #btn-routes { flex: 0 0 auto; }
-  .action-bar .suggest-action { flex: 1 1 auto; }
+  .action-bar #btn-routes { flex: 1 1 0; }
+  .action-bar .suggest-action { flex: 0 0 auto; }
 }
