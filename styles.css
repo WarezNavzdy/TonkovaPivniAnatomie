@@ -458,7 +458,15 @@ html, body {
 .custom-pub-marker.marker-amber  { background: linear-gradient(135deg,#d97706,#78350f); border: 2px solid #fed7aa; color:#fff; }
 .custom-pub-marker.marker-good   { background: linear-gradient(135deg,#0284c7,#0369a1); border: 2px solid #bae6fd; color:#fff; }
 .custom-pub-marker.marker-pending{ background: linear-gradient(135deg,#4b5563,#1f2937); border: 2px solid #6b7280; color:#fff; }
-.marker-inner { font-size: 15px; }
+.marker-inner {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 /* ── Leaflet popup ───────────────────────────────────────────── */
 .leaflet-popup-content-wrapper {
@@ -753,7 +761,7 @@ html, body { font-family: Arial, Helvetica, sans-serif; }
 .custom-pub-marker.marker-amber { background: #a87532; border-color: #fffdf8; }
 .custom-pub-marker.marker-good { background: #356b78; border-color: #fffdf8; }
 .custom-pub-marker.marker-pending { background: #777267; border-color: #fffdf8; }
-.marker-inner { font-family: Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; }
+.marker-inner { width: 21px; height: 21px; }
 .detail-hero { background: #eee8dc; }
 .detail-title { font-size: 1.85rem; font-weight: 700; }
 .detail-section-title { text-transform: none; letter-spacing: 0; color: var(--txt-lo); }

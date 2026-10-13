@@ -266,6 +266,24 @@
     });
   }
 
+  function getPubMarkerType(pub) {
+    const details = [pub.name, pub.beerType, ...(Array.isArray(pub.tags) ? pub.tags : [])]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase("cs-CZ");
+
+    if (/rockov|hudb|kabaret|punk|metal|klub/.test(details)) {
+      return { label: "hudební podnik", icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' };
+    }
+    if (/pivovar|minipivovar/.test(details)) {
+      return { label: "pivovar", icon: '<path d="M3 21h18M5 21V10l4 3v-3l4 3V7h6v14M15 11h1M15 15h1M15 18h1M8 17h2"/><path d="M13 7V4h6v3"/>' };
+    }
+    if (/bar|kafe|kavár|drink/.test(details)) {
+      return { label: "bar nebo kavárna", icon: '<path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z"/><path d="M7 8h10"/>' };
+    }
+    return { label: "hospoda nebo pivnice", icon: '<path d="M5 7h12v13H5z"/><path d="M17 10h2a2 2 0 0 1 0 4h-2M5 11h12M8 4c-1 1 1 1 0 2M12 4c-1 1 1 1 0 2"/>' };
+  }
+
   // Vytvoření stylizovaného HTML markeru
   function createMarkerIcon(pub) {
     let colorClass = "marker-gold";
@@ -279,9 +297,10 @@
       colorClass = "marker-good";
     }
 
+    const markerType = getPubMarkerType(pub);
     const html = `
-      <div class="custom-pub-marker ${colorClass}" title="${escapeHtml(pub.name)} (${escapeHtml(pub.userReviewed && pub.rating ? pub.rating + '/10' : 'Nehodnoceno')})">
-        <span class="marker-inner">${escapeHtml(pub.userReviewed && pub.rating ? pub.rating.toLocaleString("cs-CZ") : "·")}</span>
+      <div class="custom-pub-marker ${colorClass}" title="${escapeHtml(pub.name)} — ${markerType.label} (${escapeHtml(pub.userReviewed && Number.isFinite(pub.rating) ? pub.rating + '/10' : 'Nehodnoceno')})">
+        <svg class="marker-inner" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${markerType.icon}</svg>
       </div>
     `;
 
