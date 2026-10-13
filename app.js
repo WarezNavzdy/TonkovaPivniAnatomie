@@ -267,21 +267,23 @@
   }
 
   function getPubMarkerType(pub) {
-    const details = [pub.name, pub.beerType, ...(Array.isArray(pub.tags) ? pub.tags : [])]
+    const details = [
+      pub.name,
+      pub.beerType,
+      pub.quote,
+      ...(Array.isArray(pub.tags) ? pub.tags : [])
+    ]
       .filter(Boolean)
       .join(" ")
       .toLocaleLowerCase("cs-CZ");
 
-    if (/rockov|hudb|kabaret|punk|metal|klub/.test(details)) {
-      return { label: "hudební podnik", icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' };
+    if (/restaurac|jídeln|jídlo|kantýn|foodtruck|řeznictv|maso/.test(details)) {
+      return { label: "restaurace", icon: '<path d="M6 3v7M3.5 3v4a2.5 2.5 0 0 0 5 0V3M6 10v11M15 3v18M15 3c3 2 4 5 4 8h-4"/>' };
     }
-    if (/pivovar|minipivovar/.test(details)) {
-      return { label: "pivovar", icon: '<path d="M3 21h18M5 21V10l4 3v-3l4 3V7h6v14M15 11h1M15 15h1M15 18h1M8 17h2"/><path d="M13 7V4h6v3"/>' };
+    if (/(^|[^a-z])bar([^a-z]|$)|koktejl|drink/.test(details)) {
+      return { label: "bar", icon: '<path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z"/><path d="M7 8h10"/>' };
     }
-    if (/bar|kafe|kavár|drink/.test(details)) {
-      return { label: "bar nebo kavárna", icon: '<path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z"/><path d="M7 8h10"/>' };
-    }
-    return { label: "hospoda nebo pivnice", icon: '<path d="M5 7h12v13H5z"/><path d="M17 10h2a2 2 0 0 1 0 4h-2M5 11h12M8 4c-1 1 1 1 0 2M12 4c-1 1 1 1 0 2"/>' };
+    return { label: "hospoda", icon: '<path d="M5 7h12v13H5z"/><path d="M17 10h2a2 2 0 0 1 0 4h-2M5 11h12M8 4c-1 1 1 1 0 2M12 4c-1 1 1 1 0 2"/>' };
   }
 
   // Vytvoření stylizovaného HTML markeru
