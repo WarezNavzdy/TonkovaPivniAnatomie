@@ -267,6 +267,10 @@
   }
 
   function getPubMarkerType(pub) {
+    if (pub.venueType === "bar") {
+      return { label: "bar", icon: '<path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z"/><path d="M7 8h10"/>' };
+    }
+
     const details = [
       pub.name,
       pub.beerType,

@@ -444,6 +444,7 @@ var initialPubs = [
   {
     id: "zaveseny-kafe",
     name: "Zavěšený kafe",
+    venueType: "bar",
     address: "Úvoz 169/6, 118 00 Praha 1 - Hradčany",
     lat: 50.088480,
     lng: 14.396070,
