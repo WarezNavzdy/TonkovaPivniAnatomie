@@ -98,7 +98,7 @@ html, body {
   flex-shrink: 0;
   box-shadow: var(--sh-gold);
   opacity: 1;
-  background: #fff;
+  background: transparent;
 }
 
 .brand-title {
