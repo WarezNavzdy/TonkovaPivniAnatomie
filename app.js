@@ -2,6 +2,10 @@
 (function () {
   const STORAGE_KEY = "prague_pubs_data_v1";
   const SUBMISSIONS_KEY = "prague_pubs_submissions_v1";
+  const submissionsApiUrl = typeof window.PUB_SUBMISSIONS_API === "string"
+    ? window.PUB_SUBMISSIONS_API.replace(/\/+$/, "")
+    : "";
+  const usesRemoteSubmissions = Boolean(submissionsApiUrl);
   const {
     escapeHtml,
     getBeerSummary,
@@ -65,6 +69,12 @@
   }
 
   function loadPendingPubs() {
+    if (usesRemoteSubmissions) {
+      pendingPubs = [];
+      renderSubmissionCount();
+      return;
+    }
+
     try {
       const saved = localStorage.getItem(SUBMISSIONS_KEY);
       const parsed = saved ? JSON.parse(saved) : [];
@@ -77,6 +87,11 @@
   }
 
   function savePendingPubs() {
+    if (usesRemoteSubmissions) {
+      renderSubmissionCount();
+      return true;
+    }
+
     try {
       localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(pendingPubs));
       renderSubmissionCount();
@@ -92,12 +107,28 @@
     const button = document.getElementById("btn-submissions");
     if (!button) return;
     button.hidden = pendingPubs.length === 0;
-    button.textContent = `Návrhy ke schválení (${pendingPubs.length})`;
+    const label = usesRemoteSubmissions ? "Návrhy k návštěvě" : "Návrhy ke schválení";
+    button.textContent = `${label} (${pendingPubs.length})`;
   }
 
   // Asynchronní pokus o načtení z backendového REST API (pokud běží server.py)
   async function syncWithBackendIfAvailable() {
     if (!window.location.protocol.startsWith("http")) return;
+
+    if (usesRemoteSubmissions) {
+      try {
+        const response = await fetch(`${submissionsApiUrl}/api/submissions`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const suggestions = await response.json();
+        if (!Array.isArray(suggestions)) throw new Error("Neplatný seznam návrhů");
+        pendingPubs = suggestions;
+        renderSubmissionCount();
+      } catch (error) {
+        console.warn("Načtení návrhů z GitHubu se nezdařilo:", error);
+        showToast("Návrhy se nepodařilo načíst z GitHubu.");
+      }
+      return;
+    }
 
     try {
       const resp = await fetch("/api/pubs");
@@ -709,6 +740,12 @@
   function showSubmissionsModal() {
     const container = document.getElementById("submissions-container");
     if (!container) return;
+    document.getElementById("submissions-title").textContent = usesRemoteSubmissions
+      ? "Návrhy k návštěvě"
+      : "Návrhy ke schválení";
+    document.querySelector("#submissions-modal .modal-intro").textContent = usesRemoteSubmissions
+      ? "Návrhy jsou oddělené od mapy. JSON soubor v repozitáři je veřejně čitelný."
+      : "Schválené podniky se přidají do mapy. Tato fronta není chráněná přihlášením.";
 
     container.innerHTML = pendingPubs.length
       ? pendingPubs.map(pub => `
@@ -723,10 +760,12 @@
           ${getPubNotes(pub).length
             ? `<ul class="submission-notes">${getPubNotes(pub).map(note => `<li>${escapeHtml(note)}</li>`).join("")}</ul>`
             : ""}
-          <div class="submission-actions">
-            <button type="button" class="btn-action primary" data-action="approve-submission" data-pub-id="${escapeHtml(pub.id)}">Schválit a přidat</button>
-            <button type="button" class="btn-action" data-action="reject-submission" data-pub-id="${escapeHtml(pub.id)}">Odebrat návrh</button>
-          </div>
+          ${usesRemoteSubmissions ? "" : `
+            <div class="submission-actions">
+              <button type="button" class="btn-action primary" data-action="approve-submission" data-pub-id="${escapeHtml(pub.id)}">Schválit a přidat</button>
+              <button type="button" class="btn-action" data-action="reject-submission" data-pub-id="${escapeHtml(pub.id)}">Odebrat návrh</button>
+            </div>
+          `}
         </div>
       `).join("")
       : `<p class="source-note">Ve frontě teď žádné návrhy nejsou.</p>`;
@@ -735,6 +774,11 @@
   }
 
   async function approveSubmission(pubId) {
+    if (usesRemoteSubmissions) {
+      showToast("GitHub návrhy jsou pouze pro čtení a do mapy se automaticky nepřidávají.");
+      return;
+    }
+
     const proposal = pendingPubs.find(pub => pub.id === pubId);
     if (!proposal) return;
 
@@ -766,6 +810,11 @@
   }
 
   async function rejectSubmission(pubId) {
+    if (usesRemoteSubmissions) {
+      showToast("GitHub návrhy jsou pouze pro čtení.");
+      return;
+    }
+
     if (!pendingPubs.some(pub => pub.id === pubId)) return;
 
     if (window.location.protocol.startsWith("http")) {
@@ -861,6 +910,42 @@
     };
 
     newPub.submittedAt = new Date().toISOString();
+
+    if (usesRemoteSubmissions) {
+      const submissionPassword = window.prompt("Zadej soukromý přístupový klíč pro přidání návrhu:");
+      if (!submissionPassword) return;
+
+      try {
+        const response = await fetch(`${submissionsApiUrl}/api/submissions`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${submissionPassword}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(newPub)
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.suggestion || result.suggestion.id !== id) {
+          throw new Error("API nevrátilo uložený návrh");
+        }
+        pendingPubs = [result.suggestion, ...pendingPubs.filter(pub => pub.id !== id)];
+        renderSubmissionCount();
+        closeDialog(document.getElementById("add-pub-modal"), false);
+        e.target.reset();
+        document.getElementById("btn-add-pub").focus();
+        showToast(`„${name}“ bylo uloženo mezi návrhy k návštěvě.`);
+      } catch (error) {
+        console.warn("Uložení návrhu do GitHubu se nezdařilo:", error);
+        showToast(`Návrh se nepodařilo uložit: ${error.message}`);
+      }
+      return;
+    }
+
     newPub.pendingSync = true;
     pendingPubs.unshift(newPub);
     if (!savePendingPubs()) return;

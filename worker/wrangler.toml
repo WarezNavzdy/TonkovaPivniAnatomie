@@ -1,0 +1,16 @@
+name = "tonkova-pivni-navrhy"
+main = "src/index.js"
+compatibility_date = "2026-10-13"
+workers_dev = true
+
+[vars]
+GITHUB_OWNER = "WarezNavzdy"
+GITHUB_REPO = "TonkovaPivniAnatomie"
+GITHUB_BRANCH = "main"
+GITHUB_FILE = "visit-suggestions.json"
+ALLOWED_ORIGINS = "https://wareznavzdy.github.io,http://localhost:8080"
+
+[[ratelimits]]
+name = "SUBMISSION_LIMITER"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }

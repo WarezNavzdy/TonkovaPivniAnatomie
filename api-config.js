@@ -1,0 +1,1 @@
+window.PUB_SUBMISSIONS_API = "";
