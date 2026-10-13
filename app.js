@@ -114,6 +114,7 @@
   // Asynchronní pokus o načtení z backendového REST API (pokud běží server.py)
   async function syncWithBackendIfAvailable() {
     if (!window.location.protocol.startsWith("http")) return;
+    if (window.location.hostname.endsWith(".github.io")) return;
 
     if (usesRemoteSubmissions) {
       try {
@@ -1102,13 +1103,6 @@
   }
 
   function bindModalControls() {
-    const addPubBtn = document.getElementById("btn-add-pub");
-    if (addPubBtn) {
-      addPubBtn.addEventListener("click", () => {
-        openDialog(document.getElementById("add-pub-modal"));
-      });
-    }
-
     const routesBtn = document.getElementById("btn-routes");
     if (routesBtn) {
       routesBtn.addEventListener("click", showPubCrawlsModal);
