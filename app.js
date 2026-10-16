@@ -720,7 +720,7 @@
   }
 
   function resetToDefaults() {
-    if (confirm("Opravdu chceš obnovit výchozí seznam 20 hospod? Tvé případné úpravy budou nahrazeny výchozím stavem.")) {
+    if (confirm(`Opravdu chceš obnovit výchozí seznam ${getFallbackPubs().length} hospod? Tvé případné úpravy budou nahrazeny výchozím stavem.`)) {
       pubs = JSON.parse(JSON.stringify(getFallbackPubs()));
       savePubsData();
       renderMarkers();

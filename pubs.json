@@ -562,8 +562,8 @@
     "id": "dejvicka-nadrazka",
     "name": "Dejvická nádražka",
     "address": "Václavkova 169/1, 160 00 Praha 6 - Dejvice",
-    "lat": 50.096965,
-    "lng": 14.397286,
+    "lat": 50.0972307,
+    "lng": 14.4000517,
     "district": "Praha 6 - Dejvice",
     "rating": 8,
     "beerRating": "Staráč 38 Kč!, Plzeň 60,-",
@@ -586,6 +586,93 @@
       "Venkovní zahrádka přímo u nástupiště a projíždějících vlaků na Kladno"
     ],
     "atmosphere": "Kulturní střet generací, cinkot sklenic u kolejí, svoboda a nefalšovaná nádražní romantika",
+    "userReviewed": true
+  },
+  {
+    "id": "mrtva-ryba",
+    "name": "Mrtvá ryba",
+    "venueType": "bar",
+    "address": "Benátská 1965/4, 128 00 Praha 2 - Nové Město",
+    "lat": 50.0724184,
+    "lng": 14.4230724,
+    "district": "Praha 2 - Nové Město",
+    "rating": 7.75,
+    "beerRating": "Různá piva přibližně 7,5–8/10",
+    "beerType": "Různá piva, např. Kořen a Casablanca",
+    "priceLevel": "Vyšší (cca 70 Kč za pivo)",
+    "tags": [
+      "Studentský klub",
+      "Přírodovědecká fakulta",
+      "Široký výběr piv",
+      "Rušno"
+    ],
+    "quote": "Studentský klub přírodovědců – bývá tu plno a piva jsou zajímavá, i když kolem 70 Kč.",
+    "notes": [
+      "Studentský klub Přírodovědecké fakulty UK.",
+      "Slivovice je dobrá, cola nic moc (ale kdo by ji pil).",
+      "Bývá tu hodně lidí.",
+      "Toalety jsou dobré (hodnotil Adam Hámor).",
+      "Široký výběr piv, například Kořen a Casablanca; pivo stojí přibližně 70 Kč.",
+      "Piva hodnotíme přibližně na 7,5–8/10; zajímavý výběr je ale velké plus."
+    ],
+    "atmosphere": "Živý studentský klub Přírodovědecké fakulty, často plný lidí.",
+    "userReviewed": true
+  },
+  {
+    "id": "tynska-literarni-kavarna",
+    "name": "Týnská literární kavárna",
+    "address": "Týnská 630/6, 110 00 Praha 1 - Staré Město",
+    "lat": 50.0883709,
+    "lng": 14.4234595,
+    "district": "Praha 1 - Staré Město",
+    "rating": 8,
+    "beerRating": "Bernard – 8/10",
+    "beerType": "Bernard 10° (55 Kč), Bernard 12° (65 Kč)",
+    "priceLevel": "Běžná (55–65 Kč za pivo)",
+    "tags": [
+      "Literární kavárna",
+      "Vnitroblok",
+      "Centrum",
+      "Bernard"
+    ],
+    "quote": "Krásný vnitroblok v centru a pohodová atmosféra. I při plnějším provozu se dalo sednout.",
+    "notes": [
+      "V centru Prahy, s krásným vnitroblokem.",
+      "I ve středu tu bylo hodně lidí, ale místo k sezení se našlo.",
+      "Pohodová atmosféra; zavírá ve 23:00.",
+      "Bernard 10° za 55 Kč a 12° za 65 Kč.",
+      "Pivo mělo ke konci trochu zvláštní dozvuk, jinak ušlo."
+    ],
+    "atmosphere": "Pohodová literární kavárna s krásným vnitroblokem v centru.",
+    "userReviewed": true
+  },
+  {
+    "id": "staroceska-krcma",
+    "name": "Staročeská krčma",
+    "address": "V. P. Čkalova 15, 160 00 Praha 6 - Dejvice",
+    "lat": 50.0994817,
+    "lng": 14.399931,
+    "district": "Praha 6 - Dejvice",
+    "rating": 8.7,
+    "beerRating": "Plzeň a Kozel 11° – dobré",
+    "beerType": "Plzeň, Velkopopovický Kozel 11°",
+    "priceLevel": "Střední (Kozel 53 Kč, Plzeň 67 Kč)",
+    "tags": [
+      "Restaurace",
+      "Na stojáka",
+      "Otevřeno do 3:00",
+      "Dejvice"
+    ],
+    "quote": "Spíš restaurace než hospoda, ale dá se i postát. Příjemný hospodský a otevřeno až do 3:00.",
+    "notes": [
+      "Kousek od Dejvické nádražky.",
+      "Otevřeno až do 3:00.",
+      "Spíš restaurace než hospoda, ale dá se i na stojáka.",
+      "Hospodský byl v pohodě, uvnitř ale bylo dost světla.",
+      "Plnička a Kozel byly dobré.",
+      "Kozel 11° za 53 Kč, Plzeň za 67 Kč."
+    ],
+    "atmosphere": "Pozdní restaurace s možností postát u výčepu.",
     "userReviewed": true
   }
 ]
