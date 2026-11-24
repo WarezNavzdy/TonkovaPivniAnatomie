@@ -562,6 +562,52 @@ var initialPubs = [
     ],
     atmosphere: "Pozdní restaurace s možností postát u výčepu.",
     userReviewed: true
+  },
+  {
+    id: "bar-legenda",
+    name: "Bar Legenda",
+    venueType: "bar",
+    address: "Legerova, 121 32 Praha 2",
+    lat: 50.0739007,
+    lng: 14.4301417,
+    district: "Praha 2 - Vyšehrad",
+    rating: 8,
+    beerRating: "Budvar 8/10",
+    beerType: "Budějovický Budvar",
+    priceLevel: "Vyšší",
+    tags: ["Velký prostor", "Studenti medicíny", "Hlučný", "Pařba"],
+    quote: "Velké a hlučné místo, hodně mediků. Pívo je dražší, ale Budvar byl dobrý (8/10). Drinky ujdou a je tu prostor na paření.",
+    notes: [
+      "Velké místo, hodně mediků",
+      "Hlučno",
+      "Pívo dražší, za to dobrý Budvar (8/10)",
+      "Drinky ujdou, místo na paření"
+    ],
+    atmosphere: "Velký a hlučný bar vhodný na paření.",
+    userReviewed: true
+  },
+  {
+    id: "bar-waid",
+    name: "Bar Waid",
+    venueType: "bar",
+    address: "Lublaňská 57, 120 00 Praha 2",
+    lat: 50.0745523,
+    lng: 14.4310706,
+    district: "Praha 2 - Vyšehrad",
+    rating: 7,
+    beerRating: "Tankový Kácov 7/10 (55 Kč)",
+    beerType: "Tankový Kácov",
+    priceLevel: "Levná (55 Kč)",
+    tags: ["Podzemní bar", "Tankový Kácov", "Levné pivo", "Menší setkání"],
+    quote: "Podzemní, docela příjemné místo. Pivo docela ušlo: levný tankový Kácov za 55 Kč (7/10). Spíš na menší setkání, není moc místa.",
+    notes: [
+      "Podzemní bar, docela příjemné místo",
+      "Pivo docela ušlo",
+      "Levný tankový Kácov za 55 Kč (7/10)",
+      "Hodně spíš na menší setkání, není moc místa"
+    ],
+    atmosphere: "Příjemný podzemní bar s menším prostorem na posezení.",
+    userReviewed: true
   }
 ];
 

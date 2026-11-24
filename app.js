@@ -48,7 +48,9 @@
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          pubs = parsed;
+          const savedIds = new Set(parsed.map((pub) => pub && pub.id).filter(Boolean));
+          const newDefaults = getFallbackPubs().filter((pub) => !savedIds.has(pub.id));
+          pubs = parsed.concat(JSON.parse(JSON.stringify(newDefaults)));
           return;
         }
       }
