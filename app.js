@@ -185,7 +185,7 @@
     }
     return {
       label: "hospoda",
-      icon: '<path d="M6 8h11l-1 12H7L6 8Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M7.2 12h8.6l-.6 7H7.8l-.6-7Z" fill="#f4c95d" stroke="none"/><path d="M6 8V6.5a2 2 0 0 1 3.5-1.3A2.5 2.5 0 0 1 14 5a2 2 0 0 1 3 1.5V8H6Z" fill="#fffdf8" stroke="none"/><path d="M6 8h11l-1 12H7L6 8Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H16"/>'
+      icon: '<path d="M6 8h11l-1 12H7L6 8Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M7.2 8h8.6l-.6 11H7.8l-.6-11Z" fill="#f4c95d" stroke="none"/><path d="M5.5 8V6.8a2 2 0 0 1 2-2c.1-1.4 1.1-2.4 2.5-2.4 1 0 1.9.6 2.3 1.5.5-.8 1.4-1.2 2.3-1.2 1.5 0 2.6 1.2 2.6 2.7V8H5.5Z" fill="#fffdf8" stroke="none"/><path d="M6 8h11l-1 12H7L6 8Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H16"/>'
     };
   }
 
